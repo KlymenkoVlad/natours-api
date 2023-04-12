@@ -11,6 +11,18 @@ const signToken = (id) =>
     expiresIn: process.env.JWT_EXPIRES_IN,
   });
 
+const createSendToken = (user, statusCode, res) => {
+  const token = signToken(user._id);
+
+  res.status(statusCode).json({
+    status: 'success',
+    token,
+    data: {
+      user: user,
+    },
+  });
+};
+
 exports.signup = catchAsync(async (req, res, next) => {
   const newUser = await User.create({
     name: req.body.name,
@@ -19,16 +31,7 @@ exports.signup = catchAsync(async (req, res, next) => {
     passwordConfirm: req.body.passwordConfirm,
     role: req.body.role,
   });
-
-  const token = signToken(newUser._id);
-
-  res.status(201).json({
-    status: 'success',
-    token,
-    data: {
-      user: newUser,
-    },
-  });
+  createSendToken(newUser, 201, res);
 });
 
 exports.login = catchAsync(async (req, res, next) => {
@@ -43,12 +46,7 @@ exports.login = catchAsync(async (req, res, next) => {
     return next(new AppError('Incorrect email or password', 401));
   }
 
-  const token = signToken(user._id);
-
-  res.status(200).json({
-    status: 'success',
-    token,
-  });
+  createSendToken(user, 200, res);
 });
 
 exports.protect = catchAsync(async (req, res, next) => {
@@ -98,14 +96,17 @@ exports.restrictTo =
   };
 
 exports.forgotPassword = catchAsync(async (req, res, next) => {
+  // 1) Get user based on POSTed email
   const user = await User.findOne({ email: req.body.email });
   if (!user) {
-    return next(new AppError('There is no user with that email address', 404));
+    return next(new AppError('There is no user with email address.', 404));
   }
 
+  // 2) Generate the random reset token
   const resetToken = user.createPasswordResetToken();
   await user.save({ validateBeforeSave: false });
 
+  // 3) Send it to user's email
   const resetURL = `${req.protocol}://${req.get(
     'host'
   )}/api/v1/users/resetPassword/${resetToken}`;
@@ -121,15 +122,16 @@ exports.forgotPassword = catchAsync(async (req, res, next) => {
 
     res.status(200).json({
       status: 'success',
-      message: 'Token sent to email',
+      message: 'Token sent to email!',
     });
-  } catch (error) {
+  } catch (err) {
     user.passwordResetToken = undefined;
     user.passwordResetExpires = undefined;
     await user.save({ validateBeforeSave: false });
 
     return next(
-      new AppError('There was an error sending the email. Try again later', 500)
+      new AppError('There was an error sending the email. Try again later!'),
+      500
     );
   }
 });
@@ -155,10 +157,58 @@ exports.resetPassword = catchAsync(async (req, res, next) => {
   user.passwordResetExpires = undefined;
   await user.save();
 
-  const token = signToken(user._id);
-
-  res.status(200).json({
-    status: 'success',
-    token,
-  });
+  createSendToken(user, 200, res);
 });
+
+exports.updatePassword = catchAsync(async (req, res, next) => {
+  //1)Get user from collection
+
+  const currentUser = await User.findById(req.user.id).select('+password');
+  if (!currentUser) {
+    return next(
+      new AppError('The user belonging to this token does no longer exist', 401)
+    );
+  }
+
+  //2)Check if POSTed curr pasword is correct
+
+  const { passwordCurrent, password, passwordConfirm } = req.body;
+
+  if (!passwordCurrent) {
+    return next(new AppError('Please provide password', 400));
+  }
+
+  if (
+    !(await currentUser.correctPassword(passwordCurrent, currentUser.password))
+  ) {
+    return next(new AppError('Your password is wrong', 401));
+  }
+
+  //3)if so update password
+
+  if (currentUser.password === passwordCurrent) {
+    return next(new AppError('Password are the same', 400));
+  }
+
+  currentUser.password = password;
+  currentUser.passwordConfirm = passwordConfirm;
+  await currentUser.save();
+
+  //4)log user in send JWT
+
+  createSendToken(currentUser, 200, res);
+});
+
+// exports.updatePassword = catchAsync(async (req, res, next) => {
+//   const user = await User.findById(req.user.id).select('+password');
+
+//   if (!(await user.correctPassword(req.body.passwordCurrent, user.password))) {
+//     return next(new AppError('Your current password is wrong.', 401));
+//   }
+
+//   user.password = req.body.password;
+//   user.passwordConfirm = req.body.passwordConfirm;
+//   await user.save();
+
+//   createSendToken(user, 200, res);
+// });
