@@ -34,8 +34,9 @@ const tourSchema = new mongoose.Schema(
       default: 4.5,
       min: [1, 'Rating must be above 1.0'],
       max: [5, 'Rating must be below 5.0'],
+      set: (val) => Math.round(val * 10) / 10,
     },
-    ratingsQuanatity: {
+    ratingsQuantity: {
       type: Number,
       default: 0,
     },
@@ -77,7 +78,7 @@ const tourSchema = new mongoose.Schema(
       default: false,
     },
     startLocation: {
-      //GeoJSON
+      // GeoJSON
       type: {
         type: String,
         default: 'Point',
@@ -92,7 +93,7 @@ const tourSchema = new mongoose.Schema(
         type: {
           type: String,
           default: 'Point',
-          emun: ['Point'],
+          enum: ['Point'],
         },
         coordinates: [Number],
         address: String,
@@ -113,6 +114,10 @@ const tourSchema = new mongoose.Schema(
   }
 );
 
+tourSchema.index({ price: 1, ratingsAverage: -1 });
+tourSchema.index({ slug: 1 });
+tourSchema.index({ startLocation: '2dsphere' });
+
 tourSchema.virtual('durationWeeks').get(function () {
   return this.duration / 7;
 });
@@ -129,19 +134,10 @@ tourSchema.pre('save', function (next) {
   next();
 });
 
+//! analoug of virtual
 // tourSchema.pre('save', async function (next) {
 //   const guidesPromises = this.guides.map(async (id) => await User.findById(id));
 //   this.guides = await Promise.all(guidesPromises); //use Promise all because of result of guidesPromises is promise
-//   next();
-// });
-
-// tourSchema.pre('save', (next) => {
-//   console.log('Will save document');
-//   next();
-// });
-
-// tourSchema.post('save', (doc, next) => {
-//   console.log(doc);
 //   next();
 // });
 
@@ -167,10 +163,10 @@ tourSchema.post(/^find/, (docs, next) => {
   next();
 });
 
-tourSchema.pre('aggregate', function (next) {
-  this.pipeline().unshift({ $match: { secretTour: { $ne: true } } });
-  next();
-});
+// tourSchema.pre('aggregate', function (next) {
+//   this.pipeline().unshift({ $match: { secretTour: { $ne: true } } });
+//   next();
+// });
 
 const Tour = mongoose.model('Tour', tourSchema);
 
