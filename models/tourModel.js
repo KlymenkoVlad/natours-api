@@ -157,12 +157,6 @@ tourSchema.pre(/^find/, function (next) {
   next();
 });
 
-tourSchema.post(/^find/, (docs, next) => {
-  //all stings that starts with find
-  console.log(docs);
-  next();
-});
-
 // tourSchema.pre('aggregate', function (next) {
 //   this.pipeline().unshift({ $match: { secretTour: { $ne: true } } });
 //   next();
