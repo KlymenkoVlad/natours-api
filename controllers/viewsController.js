@@ -4,6 +4,15 @@ const Booking = require('../models/bookingModel');
 const AppError = require('../utils/appError');
 const catchAsync = require('../utils/catchAsync');
 
+exports.alerts = (req, res, next) => {
+  const { alert } = req.query;
+  if (alert === 'booking') {
+    res.locals.alert =
+      "Your booking was successful! Please check your email for a confirmaton. If your bookiing doesn't show up here immediately, please come back later";
+  }
+  next();
+};
+
 exports.getOverview = catchAsync(async (req, res) => {
   const tours = await Tour.find();
 
@@ -56,21 +65,21 @@ exports.getMyTours = catchAsync(async (req, res, next) => {
   });
 });
 
-// exports.updateUserData = catchAsync(async (req, res, next) => {
-//   const updatedUser = await User.findByIdAndUpdate(
-//     req.user.id,
-//     {
-//       name: req.body.name,
-//       email: req.body.email,
-//     },
-//     {
-//       new: true,
-//       runValidators: true,
-//     }
-//   );
+exports.updateUserData = catchAsync(async (req, res, next) => {
+  const updatedUser = await User.findByIdAndUpdate(
+    req.user.id,
+    {
+      name: req.body.name,
+      email: req.body.email,
+    },
+    {
+      new: true,
+      runValidators: true,
+    }
+  );
 
-//   res.status(200).render('account', {
-//     title: 'Your account',
-//     user: updatedUser,
-//   });
-// });
+  res.status(200).render('account', {
+    title: 'Your account',
+    user: updatedUser,
+  });
+});
