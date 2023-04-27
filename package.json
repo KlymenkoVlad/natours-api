@@ -4,7 +4,8 @@
   "description": "Learning node, express and mongoDB",
   "main": "app.js",
   "scripts": {
-    "start": "concurrently \"nodemon server.js\" \"npm run watch:js\"",
+    "start": "node server.js",
+    "dev": "concurrently \"nodemon server.js\" \"npm run watch:js\"",
     "start:prod": "SET NODE_ENV=production && nodemon server.js",
     "debug": "ndb server.js",
     "watch:js": "parcel watch ./public/js/index.js --out-dir ./public/js --out-file bundle.js",
